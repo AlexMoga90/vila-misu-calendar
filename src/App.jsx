@@ -30,7 +30,7 @@ export default function CalendarApp() {
 
   const days = generateMonthDays();
 
-  const getReservationKey = (room, date) => \`\${room}-\${format(date, "yyyy-MM-dd")}\`;
+ const key = `${room.name}-${format(day, "yyyy-MM-dd")}`;
 
   const handleAddReservation = () => {
     if (!selectedDate || !activeRoom || !guestName || stayLength < 1) return;
