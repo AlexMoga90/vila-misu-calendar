@@ -30,7 +30,7 @@ export default function CalendarApp() {
 
   const days = generateMonthDays();
 
- const key = `${room.name}-${format(day, "yyyy-MM-dd")}`;
+  const getReservationKey = (room, date) => `${room}-${format(date, "yyyy-MM-dd")}`;
 
   const handleAddReservation = () => {
     if (!selectedDate || !activeRoom || !guestName || stayLength < 1) return;
@@ -40,8 +40,7 @@ export default function CalendarApp() {
     for (let i = 0; i < stayLength; i++) {
       const date = addDays(selectedDate, i);
       const key = getReservationKey(activeRoom.name, date);
-      if (newReservations[key]) continue; // prevenim suprascrierea
-
+      if (newReservations[key]) continue; // evită duplicate
       newReservations[key] = {
         name: guestName,
         length: stayLength,
@@ -51,14 +50,18 @@ export default function CalendarApp() {
     }
 
     setReservations(newReservations);
+    resetDialog();
+  };
+
+  const resetDialog = () => {
     setSelectedDate(null);
     setActiveRoom(null);
     setGuestName("");
     setStayLength(1);
   };
 
-  const handleCancelReservation = (room, date) => {
-    const key = getReservationKey(room, date);
+  const cancelReservation = (roomName, date) => {
+    const key = getReservationKey(roomName, date);
     const updated = { ...reservations };
     delete updated[key];
     setReservations(updated);
@@ -69,35 +72,46 @@ export default function CalendarApp() {
   );
 
   return (
-    <div className="p-4 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Calendar Rezervări – Vila Misu</h1>
+    <div style={{ padding: "1rem", maxWidth: 1000, margin: "auto" }}>
+      <h1 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "1rem" }}>
+        Calendar Rezervări - Vila Misu
+      </h1>
       <input
         type="text"
         placeholder="Caută după nume..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="mb-4 p-2 border rounded w-full max-w-sm"
+        style={{ padding: "0.5rem", marginBottom: "1rem", width: "100%" }}
       />
 
-      <div className="grid grid-cols-7 gap-2">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "0.5rem" }}>
         {days.map((day) => (
-          <div key={day} className="border p-2 rounded h-28 overflow-auto bg-white">
-            <p className="text-sm font-semibold cursor-pointer" onClick={() => setSelectedDate(day)}>
-              {format(day, "dd MMM")}
-            </p>
+          <div
+            key={day}
+            style={{
+              border: "1px solid #ccc",
+              padding: "0.5rem",
+              backgroundColor: "#fff",
+              minHeight: 100,
+            }}
+            onClick={() => setSelectedDate(day)}
+          >
+            <div style={{ fontWeight: "bold" }}>{format(day, "dd MMM")}</div>
             {rooms.map((room) => {
               const key = getReservationKey(room.name, day);
               const res = reservations[key];
               if (!res) return null;
               return (
-                <div key={key} className="text-xs mt-1 bg-red-200 p-1 rounded flex justify-between items-center">
-                  <span>{room.name}: {res.name}</span>
+                <div key={key} style={{ fontSize: "0.75rem", backgroundColor: "#fdd", marginTop: 2, padding: 2 }}>
+                  {room.name}: {res.name}
                   <button
-                    onClick={() => handleCancelReservation(room.name, day)}
-                    className="ml-2 text-red-600 font-bold"
-                    title="Anulează"
+                    style={{ marginLeft: 5, fontSize: 10 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      cancelReservation(room.name, day);
+                    }}
                   >
-                    ✕
+                    ✖
                   </button>
                 </div>
               );
@@ -107,21 +121,20 @@ export default function CalendarApp() {
       </div>
 
       {selectedDate && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white p-4 rounded shadow max-w-md w-full">
-            <h2 className="text-lg font-semibold mb-4">
-              Adaugă rezervare – {format(selectedDate, "dd MMM yyyy")}
-            </h2>
-
-            <div className="mb-2">
-              <label className="font-medium">Selectează cameră:</label>
+        <div style={{
+          position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.3)",
+          display: "flex", alignItems: "center", justifyContent: "center"
+        }}>
+          <div style={{ backgroundColor: "#fff", padding: 20, borderRadius: 8, width: 400 }}>
+            <h2>Rezervare pentru {format(selectedDate, "dd MMM yyyy")}</h2>
+            <div style={{ marginBottom: 10 }}>
               <select
-                className="w-full border p-2 rounded mt-1"
                 value={activeRoom?.name || ""}
                 onChange={(e) => {
                   const selected = rooms.find((r) => r.name === e.target.value);
                   setActiveRoom(selected);
                 }}
+                style={{ width: "100%", padding: 6 }}
               >
                 <option value="">Alege camera</option>
                 {rooms.map((room) => (
@@ -131,54 +144,36 @@ export default function CalendarApp() {
                 ))}
               </select>
             </div>
-
-            <div className="mb-2">
-              <label className="block font-medium">Nume cazat:</label>
-              <input
-                value={guestName}
-                onChange={(e) => setGuestName(e.target.value)}
-                placeholder="Nume client"
-                className="w-full border p-2 rounded"
-              />
-            </div>
-
-            <div className="mb-4">
-              <label className="block font-medium">Număr de zile:</label>
-              <input
-                type="number"
-                min={1}
-                max={30}
-                value={stayLength}
-                onChange={(e) => setStayLength(parseInt(e.target.value))}
-                className="w-full border p-2 rounded"
-              />
-            </div>
-
-            <div className="flex justify-between">
-              <button
-                onClick={handleAddReservation}
-                className="bg-blue-600 text-white px-4 py-2 rounded"
-              >
-                Salvează
-              </button>
-              <button
-                onClick={() => setSelectedDate(null)}
-                className="border px-4 py-2 rounded"
-              >
-                Anulează
-              </button>
+            <input
+              type="text"
+              value={guestName}
+              onChange={(e) => setGuestName(e.target.value)}
+              placeholder="Nume cazat"
+              style={{ width: "100%", marginBottom: 8, padding: 6 }}
+            />
+            <input
+              type="number"
+              min={1}
+              value={stayLength}
+              onChange={(e) => setStayLength(parseInt(e.target.value))}
+              placeholder="Zile"
+              style={{ width: "100%", marginBottom: 8, padding: 6 }}
+            />
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <button onClick={handleAddReservation}>Salvează</button>
+              <button onClick={resetDialog}>Închide</button>
             </div>
           </div>
         </div>
       )}
 
       {search && (
-        <div className="mt-6">
-          <h3 className="font-semibold mb-2">Rezultate căutare:</h3>
-          {filteredReservations.map((res, idx) => (
-            <p key={idx} className="text-sm">
+        <div style={{ marginTop: 20 }}>
+          <h3>Rezultate căutare:</h3>
+          {filteredReservations.map((res, i) => (
+            <div key={i} style={{ fontSize: "0.9rem" }}>
               {res.name} – {res.room} ({format(res.date, "dd MMM yyyy")})
-            </p>
+            </div>
           ))}
         </div>
       )}
