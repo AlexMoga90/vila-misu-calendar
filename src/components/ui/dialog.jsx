@@ -1,0 +1,1 @@
+export const Dialog = ({ children, open, onOpenChange }) => open ? children : null;
